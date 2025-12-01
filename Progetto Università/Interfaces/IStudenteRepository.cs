@@ -4,7 +4,7 @@ namespace Interfaces;
 
 public interface IStudenteRepository
 {
-    void Aggiungi(Studente studente);
+    void Aggiungi(Studente s);
     Studente CercaPerMatricola(string matricola);
     List<Studente> Tutti();
 }

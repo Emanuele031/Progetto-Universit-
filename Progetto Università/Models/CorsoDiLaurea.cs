@@ -1,9 +1,11 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using Interfaces;
+
 
 namespace Models
 {
-    public class CorsoDiLaurea
+    public class CorsoDiLaurea : IEntita
     {
         public string Codice { get; set; }
         public string Nome { get; set; }
@@ -15,6 +17,8 @@ namespace Models
             Nome = nome;
             Professori = new List<Professore>();
         }
+
+        public string Id => Codice;
 
         public void AggiungiProfessore(Professore p)
         {

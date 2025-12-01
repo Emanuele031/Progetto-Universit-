@@ -1,6 +1,8 @@
-﻿namespace Models
+﻿using Interfaces;
+
+namespace Models
 {
-    public class Professore
+    public class Professore : IEntita
     {
         public string Nome { get; set; }
         public string Cognome { get; set; }
@@ -15,6 +17,7 @@
             Materia = materia;
         }
 
+        public string Id => CodiceId;
         public override string ToString() => $"{Nome} {Cognome} (ID: {CodiceId}) - Materia: {Materia}";
     }
 }

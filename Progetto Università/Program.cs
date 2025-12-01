@@ -7,13 +7,9 @@ class Program
 {
     static void Main()
     {
-        var controller = new UniversitaController(
-            new StudenteRepository(),
-            new ProfessoreRepository(),
-            new CorsoRepository()
-        );
-
-        Menu.Start(controller);
+        var controller = new UniversitaController(); // senza parametri
+        Views.Menu.Start(controller);
     }
 }
+
 
