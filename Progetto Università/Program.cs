@@ -7,7 +7,7 @@ class Program
 {
     static void Main()
     {
-        var controller = new UniversitaController(); // senza parametri
+        var controller = new UniversitaController(); 
         Views.Menu.Start(controller);
     }
 }

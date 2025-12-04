@@ -12,6 +12,7 @@ namespace Models
         public string Matricola { get; set; }
         public CorsoDiLaurea CorsoIscritto { get; set; }
         public List<Voto> Voti { get; private set; }
+        public List<CorsoDiLaurea> Libretto { get; private set; } = new List<CorsoDiLaurea>();
 
         public Studente(string nome, string cognome, string matricola, CorsoDiLaurea corso)
         {
@@ -23,6 +24,7 @@ namespace Models
         }
 
         public string Id => Matricola;
+
         public double Media => Voti.Any() ? Voti.Average(v => v.Valore) : 0;
 
         public void AggiungiVoto(Voto voto)
@@ -35,20 +37,31 @@ namespace Models
         public void StampaLibretto()
         {
             Console.WriteLine($"\nLibretto di {Nome} {Cognome} (Matricola {Matricola}) - Corso: {CorsoIscritto.Nome}");
-            if (!Voti.Any()) { Console.WriteLine("Nessun voto presente."); return; }
+            if (!Voti.Any())
+            {
+                Console.WriteLine("Nessun voto presente.");
+                return;
+            }
+
             foreach (var voto in Voti)
                 Console.WriteLine($"{voto.Materia}: {voto.Valore}");
+
             Console.WriteLine($"Media: {Media:F2}");
         }
 
         public int CompareTo(Studente other)
         {
-            int cmp = other.Media.CompareTo(this.Media); 
+            int cmp = other.Media.CompareTo(this.Media);
             if (cmp != 0) return cmp;
             cmp = string.Compare(this.Cognome, other.Cognome, StringComparison.OrdinalIgnoreCase);
             if (cmp != 0) return cmp;
             return string.Compare(this.Nome, other.Nome, StringComparison.OrdinalIgnoreCase);
         }
+
+        public void AggiungiCorsoAlLibretto(CorsoDiLaurea corso)
+        {
+            if (!Libretto.Contains(corso))
+                Libretto.Add(corso);
+        }
     }
 }
-

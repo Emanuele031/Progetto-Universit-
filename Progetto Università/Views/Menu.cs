@@ -1,6 +1,7 @@
 ﻿using System;
 using Models;
 using Controllers;
+using Services;
 
 namespace Views
 {
@@ -23,6 +24,7 @@ namespace Views
                 Console.WriteLine("8. Visualizza tutti gli studenti");
                 Console.WriteLine("9. Esci");
                 Console.WriteLine("10. Menu Amministrazione");
+                Console.WriteLine("11. Menu Logger");
                 Console.Write("Seleziona: ");
 
                 if (!int.TryParse(Console.ReadLine(), out scelta))
@@ -38,6 +40,8 @@ namespace Views
                         EseguiSceltaPrincipale(uni, scelta);
                     else if (scelta == 10)
                         MenuAmministrazione(uni);
+                    else if (scelta == 11)
+                        MenuLogger();
                 }
                 catch (Exception ex)
                 {
@@ -53,6 +57,7 @@ namespace Views
             } while (scelta != 9);
         }
 
+        
         static void EseguiSceltaPrincipale(UniversitaController uni, int scelta)
         {
             switch (scelta)
@@ -69,6 +74,7 @@ namespace Views
             }
         }
 
+        
         static void MenuAmministrazione(UniversitaController uni)
         {
             int sceltaAdmin;
@@ -116,12 +122,87 @@ namespace Views
             } while (sceltaAdmin != 7);
         }
 
-        // ----- Metodi principali -----
+        
+        static void MenuLogger()
+        {
+            int scelta;
+            do
+            {
+                Console.Clear();
+                Console.WriteLine("=== MENU LOGGER ===");
+                Console.WriteLine("1. Visualizza log memoria");
+                Console.WriteLine("2. Pulisci log memoria");
+                Console.WriteLine("3. Visualizza log file");
+                Console.WriteLine("4. Pulisci log file");
+                Console.WriteLine("5. Cambia percorso file log");
+                Console.WriteLine("6. Torna al menu principale");
+                Console.Write("Seleziona: ");
+
+                if (!int.TryParse(Console.ReadLine(), out scelta))
+                {
+                    Console.WriteLine("Input non valido.");
+                    Console.ReadKey();
+                    continue;
+                }
+
+                switch (scelta)
+                {
+                    case 1:
+                        Console.WriteLine("--- Log in memoria ---");
+                        var memoriaLogs = Logger.Instance.GetLogs();
+                        if (memoriaLogs.Count == 0)
+                            Console.WriteLine("Nessun log presente in memoria.");
+                        else
+                            foreach (var msg in memoriaLogs)
+                                Console.WriteLine(msg);
+                        break;
+
+                    case 2:
+                        Logger.Instance.Clear();
+                        Console.WriteLine("Log in memoria pulito.");
+                        break;
+
+                    case 3:
+                        Console.WriteLine("--- Log su file ---");
+                        var fileLogs = LoggerFile.Instance.GetLogs();
+                        if (fileLogs.Count == 0)
+                            Console.WriteLine("Nessun log presente nel file.");
+                        else
+                            foreach (var msg in fileLogs)
+                                Console.WriteLine(msg);
+                        break;
+
+                    case 4:
+                        LoggerFile.Instance.Clear();
+                        Console.WriteLine("Log su file pulito.");
+                        break;
+
+                    case 5:
+                        Console.Write("Nuovo percorso file log: ");
+                        string path = Console.ReadLine();
+                        LoggerFile.Instance.SetFilePath(path);
+                        Console.WriteLine($"Percorso log aggiornato a {path}");
+                        break;
+
+                    case 6: return;
+                    default: Console.WriteLine("Scelta non valida"); break;
+                }
+
+                Console.WriteLine("\nPremi un tasto per continuare...");
+                Console.ReadKey();
+
+            } while (scelta != 6);
+        }
+
+        
         static void AggiungiCorso(UniversitaController uni)
         {
             Console.Write("Codice corso: "); string codice = Console.ReadLine();
             Console.Write("Nome corso: "); string nome = Console.ReadLine();
             uni.AggiungiCorso(new CorsoDiLaurea(codice, nome));
+            string msg = $"[LOG] Corso aggiunto: {nome} ({codice})";
+            Logger.Instance.Log(msg);
+            LoggerFile.Instance.Log(msg);
             Console.WriteLine("Corso aggiunto.");
         }
 
@@ -130,11 +211,33 @@ namespace Views
             Console.Write("Nome: "); string nome = Console.ReadLine();
             Console.Write("Cognome: "); string cognome = Console.ReadLine();
             Console.Write("Codice ID: "); string id = Console.ReadLine();
-            Console.Write("Materia: "); string materia = Console.ReadLine();
-            Console.Write("Codice corso: "); string corso = Console.ReadLine();
-            uni.AggiungiProfessore(new Professore(nome, cognome, id, materia), corso);
+
+            Console.WriteLine("Corsi disponibili:");
+            foreach (var c in uni.CercaTuttiCorsi())
+                Console.WriteLine($"{c.Codice} - {c.Nome}");
+
+            Console.Write("Codice corso: "); string codiceCorso = Console.ReadLine();
+            var corso = uni.CercaCorso(codiceCorso);
+            if (corso == null)
+            {
+                Console.WriteLine("Corso non trovato.");
+                return;
+            }
+
+            Console.Write("Materia insegnata: "); string materia = Console.ReadLine();
+            var materie = new List<string> { materia };
+
+            Professore p = new Professore(nome, cognome, id, materie);
+
+            uni.AggiungiProfessore(p, corso.Codice, materie);
+
+            string msg = $"[LOG] Professore aggiunto: {nome} {cognome} ({id}) - Materia: {materia} al corso {corso.Nome}";
+            Logger.Instance.Log(msg);
+            LoggerFile.Instance.Log(msg);
+
             Console.WriteLine("Professore aggiunto.");
         }
+
 
         static void AggiungiStudente(UniversitaController uni)
         {
@@ -146,6 +249,9 @@ namespace Views
             Console.Write("Codice corso: "); string codiceCorso = Console.ReadLine();
             var corso = uni.CercaCorso(codiceCorso);
             uni.AggiungiStudente(new Studente(nome, cognome, matricola, corso));
+            string msg = $"[LOG] Studente aggiunto: {nome} {cognome} ({matricola})";
+            Logger.Instance.Log(msg);
+            LoggerFile.Instance.Log(msg);
             Console.WriteLine("Studente aggiunto.");
         }
 
@@ -156,6 +262,9 @@ namespace Views
             Console.Write("Voto: ");
             if (!int.TryParse(Console.ReadLine(), out int voto)) { Console.WriteLine("Voto non valido."); return; }
             uni.AggiungiVotoStudente(matricola, materia, voto);
+            string msg = $"[LOG] Voto aggiunto: {voto} in {materia} per {matricola}";
+            Logger.Instance.Log(msg);
+            LoggerFile.Instance.Log(msg);
             Console.WriteLine("Voto aggiunto.");
         }
 
@@ -163,6 +272,72 @@ namespace Views
         {
             Console.Write("Matricola: "); string matricola = Console.ReadLine();
             uni.StampaLibrettoStudente(matricola);
+            string msg = $"[LOG] Visualizzato libretto studente: {matricola}";
+            Logger.Instance.Log(msg);
+            LoggerFile.Instance.Log(msg);
+        }
+
+        
+        static void OrdinaStudenti(UniversitaController uni)
+        {
+            Console.WriteLine("--- Studenti ordinati per media ---");
+            foreach (var s in uni.OrdinaStudentiPerMedia())
+                Console.WriteLine($"{s.Nome} {s.Cognome} ({s.Matricola}) - Media: {s.Media:F2}");
+            string msg = "[LOG] Studenti ordinati per media";
+            Logger.Instance.Log(msg);
+            LoggerFile.Instance.Log(msg);
+        }
+
+        static void VisualizzaStorico(UniversitaController uni)
+        {
+            Console.WriteLine("--- Storico Operazioni ---");
+            foreach (var op in uni.VisualizzaStorico()) Console.WriteLine(op);
+            string msg = "[LOG] Visualizzato storico operazioni";
+            Logger.Instance.Log(msg);
+            LoggerFile.Instance.Log(msg);
+        }
+
+        static void AnnullaUltimaOperazione(UniversitaController uni)
+        {
+            var op = uni.AnnullaUltimaOperazione();
+            Console.WriteLine(op != null ? $"Operazione annullata: {op}" : "Nessuna operazione da annullare.");
+            string msg = $"[LOG] Operazione annullata: {op}";
+            Logger.Instance.Log(msg);
+            LoggerFile.Instance.Log(msg);
+        }
+
+        static void AggiungiRichiestaIscrizione(UniversitaController uni)
+        {
+            Console.Write("Matricola studente: "); string m = Console.ReadLine();
+            Console.WriteLine("Corsi disponibili:");
+            foreach (var c in uni.CercaTuttiCorsi()) Console.WriteLine($"{c.Codice} - {c.Nome}");
+            Console.Write("Codice corso: "); string codiceCorso = Console.ReadLine();
+            var corso = uni.CercaCorso(codiceCorso);
+            var studente = uni.CercaStudente(m);
+            uni.AggiungiRichiestaIscrizione(studente, corso);
+            string msg = $"[LOG] Richiesta iscrizione aggiunta: {m} -> {codiceCorso}";
+            Logger.Instance.Log(msg);
+            LoggerFile.Instance.Log(msg);
+            Console.WriteLine("Richiesta aggiunta alla coda.");
+        }
+
+        static void ApprovaProssimaIscrizione(UniversitaController uni)
+        {
+            var r = uni.ApprovaProssimaIscrizione();
+            Console.WriteLine(r != null ? $"Iscrizione approvata: {r.Studente.Nome} {r.Studente.Cognome} -> {r.Corso.Nome}" : "Nessuna richiesta in coda.");
+            string msg = r != null ? $"[LOG] Iscrizione approvata: {r.Studente.Matricola} -> {r.Corso.Codice}" : "[LOG] Nessuna iscrizione da approvare";
+            Logger.Instance.Log(msg);
+            LoggerFile.Instance.Log(msg);
+        }
+
+        static void VisualizzaCodaIscrizioni(UniversitaController uni)
+        {
+            Console.WriteLine("--- Coda iscrizioni ---");
+            foreach (var r in uni.VisualizzaCodaIscrizioni())
+                Console.WriteLine($"{r.Studente.Nome} {r.Studente.Cognome} ({r.Studente.Matricola}) -> {r.Corso.Nome}");
+            string msg = "[LOG] Visualizzata coda iscrizioni";
+            Logger.Instance.Log(msg);
+            LoggerFile.Instance.Log(msg);
         }
 
         static void VisualizzaCorsi(UniversitaController uni)
@@ -182,51 +357,6 @@ namespace Views
             Console.WriteLine("--- Studenti ---");
             foreach (var s in uni.CercaTuttiStudenti())
                 Console.WriteLine($"{s.Nome} {s.Cognome} ({s.Matricola}) - Corso: {s.CorsoIscritto.Nome}");
-        }
-
-        // ----- Metodi amministrazione -----
-        static void OrdinaStudenti(UniversitaController uni)
-        {
-            Console.WriteLine("--- Studenti ordinati per media ---");
-            foreach (var s in uni.OrdinaStudentiPerMedia())
-                Console.WriteLine($"{s.Nome} {s.Cognome} ({s.Matricola}) - Media: {s.Media:F2}");
-        }
-
-        static void VisualizzaStorico(UniversitaController uni)
-        {
-            Console.WriteLine("--- Storico Operazioni ---");
-            foreach (var op in uni.VisualizzaStorico()) Console.WriteLine(op);
-        }
-
-        static void AnnullaUltimaOperazione(UniversitaController uni)
-        {
-            var op = uni.AnnullaUltimaOperazione();
-            Console.WriteLine(op != null ? $"Operazione annullata: {op}" : "Nessuna operazione da annullare.");
-        }
-
-        static void AggiungiRichiestaIscrizione(UniversitaController uni)
-        {
-            Console.Write("Matricola studente: "); string m = Console.ReadLine();
-            Console.WriteLine("Corsi disponibili:");
-            foreach (var c in uni.CercaTuttiCorsi()) Console.WriteLine($"{c.Codice} - {c.Nome}");
-            Console.Write("Codice corso: "); string codiceCorso = Console.ReadLine();
-            var corso = uni.CercaCorso(codiceCorso);
-            var studente = uni.CercaStudente(m);
-            uni.AggiungiRichiestaIscrizione(studente, corso);
-            Console.WriteLine("Richiesta aggiunta alla coda.");
-        }
-
-        static void ApprovaProssimaIscrizione(UniversitaController uni)
-        {
-            var r = uni.ApprovaProssimaIscrizione();
-            Console.WriteLine(r != null ? $"Iscrizione approvata: {r.Studente.Nome} {r.Studente.Cognome} -> {r.Corso.Nome}" : "Nessuna richiesta in coda.");
-        }
-
-        static void VisualizzaCodaIscrizioni(UniversitaController uni)
-        {
-            Console.WriteLine("--- Coda iscrizioni ---");
-            foreach (var r in uni.VisualizzaCodaIscrizioni())
-                Console.WriteLine($"{r.Studente.Nome} {r.Studente.Cognome} ({r.Studente.Matricola}) -> {r.Corso.Nome}");
         }
     }
 }

@@ -2,7 +2,6 @@
 using System.Linq;
 using Interfaces;
 
-
 namespace Models
 {
     public class CorsoDiLaurea : IEntita
@@ -20,14 +19,23 @@ namespace Models
 
         public string Id => Codice;
 
-        public void AggiungiProfessore(Professore p)
+        public void AggiungiProfessore(Professore p, List<string> materie)
         {
-            if (!Professori.Any(pr => pr.CodiceId == p.CodiceId && pr.Materia == p.Materia))
+            if (!Professori.Any(pr => pr.CodiceId == p.CodiceId))
                 Professori.Add(p);
+
+            foreach (var m in materie)
+                p.AggiungiMateria(m);
         }
 
-        public List<string> Materie() => Professori.Select(p => p.Materia).Distinct().ToList();
+        public List<string> Materie()
+        {
+            return Professori.SelectMany(p => p.MaterieInsegnate).Distinct().ToList();
+        }
 
-        public override string ToString() => $"{Nome} ({Codice}) - Professori: {string.Join(", ", Professori.Select(p => p.Nome + " " + p.Cognome))}";
+        public override string ToString()
+        {
+            return $"{Nome} ({Codice}) - Professori: {string.Join(", ", Professori.Select(p => p.Nome + " " + p.Cognome))}";
+        }
     }
 }
