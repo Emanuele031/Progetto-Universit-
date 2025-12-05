@@ -1,7 +1,9 @@
-﻿using System;
+﻿using Controllers;
 using Models;
-using Controllers;
+using Progetto_Università.Interfaces;
 using Services;
+using System;
+using System.Data.SqlClient;
 
 namespace Views
 {
@@ -122,7 +124,7 @@ namespace Views
             } while (sceltaAdmin != 7);
         }
 
-        
+
         static void MenuLogger()
         {
             int scelta;
@@ -134,8 +136,11 @@ namespace Views
                 Console.WriteLine("2. Pulisci log memoria");
                 Console.WriteLine("3. Visualizza log file");
                 Console.WriteLine("4. Pulisci log file");
-                Console.WriteLine("5. Cambia percorso file log");
-                Console.WriteLine("6. Torna al menu principale");
+                Console.WriteLine("5. Visualizza log database"); 
+                Console.WriteLine("6. Pulisci log database");    
+                Console.WriteLine("7. Configura Logger (Attiva/Disattiva)"); 
+                Console.WriteLine("8. Cambia percorso file log");            
+                Console.WriteLine("9. Torna al menu principale");            
                 Console.Write("Seleziona: ");
 
                 if (!int.TryParse(Console.ReadLine(), out scelta))
@@ -177,32 +182,116 @@ namespace Views
                         Console.WriteLine("Log su file pulito.");
                         break;
 
-                    case 5:
+                    case 5: 
+                        Console.WriteLine("--- Log su Database ---");
+                        var dbLogs = LoggerDatabase.Instance.GetLogs();
+                        if (dbLogs.Count == 0)
+                            Console.WriteLine("Nessun log presente nel database.");
+                        else
+                            foreach (var msg in dbLogs)
+                                Console.WriteLine(msg);
+                        break;
+
+                    case 6: 
+                        LoggerDatabase.Instance.Clear();
+                        Console.WriteLine("Log su database pulito.");
+                        break;
+
+                    case 7: MenuConfigurazioneLogger(); break; 
+
+                    case 8: 
                         Console.Write("Nuovo percorso file log: ");
                         string path = Console.ReadLine();
                         LoggerFile.Instance.SetFilePath(path);
                         Console.WriteLine($"Percorso log aggiornato a {path}");
                         break;
 
-                    case 6: return;
+                    case 9: return;
                     default: Console.WriteLine("Scelta non valida"); break;
                 }
 
                 Console.WriteLine("\nPremi un tasto per continuare...");
                 Console.ReadKey();
 
-            } while (scelta != 6);
+            } while (scelta != 9);
         }
 
-        
+        static void MenuConfigurazioneLogger()
+        {
+            int scelta;
+            do
+            {
+                Console.Clear();
+                Console.WriteLine("=== CONFIGURAZIONE LOGGER ===");
+                Console.WriteLine("Quale logger vuoi attivare/disattivare?");
+
+                
+                bool statoMemoria = CompositeLogger.Instance.GetLoggerStatus(Logger.Instance);
+                bool statoFile = CompositeLogger.Instance.GetLoggerStatus(LoggerFile.Instance);
+                bool statoDb = CompositeLogger.Instance.GetLoggerStatus(LoggerDatabase.Instance);
+
+                Console.WriteLine($"1. Logger in Memoria ({(statoMemoria ? "ATTIVO" : "DISATTIVO")})");
+                Console.WriteLine($"2. Logger su File ({(statoFile ? "ATTIVO" : "DISATTIVO")})");
+                Console.WriteLine($"3. Logger su Database ({(statoDb ? "ATTIVO" : "DISATTIVO")})");
+                Console.WriteLine("4. Torna al menu Logger");
+                Console.Write("Seleziona: ");
+
+                if (!int.TryParse(Console.ReadLine(), out scelta))
+                {
+                    Console.WriteLine("Input non valido.");
+                    Console.ReadKey();
+                    continue;
+                }
+
+                ILogger loggerSelezionato = null;
+                string nomeLogger = "";
+
+                switch (scelta)
+                {
+                    case 1: loggerSelezionato = Logger.Instance; nomeLogger = "Memoria"; break;
+                    case 2: loggerSelezionato = LoggerFile.Instance; nomeLogger = "File"; break;
+                    case 3: loggerSelezionato = LoggerDatabase.Instance; nomeLogger = "Database"; break;
+                    case 4: return;
+                    default: Console.WriteLine("Scelta non valida."); break;
+                }
+
+                if (loggerSelezionato != null)
+                {
+                    bool statoAttuale = CompositeLogger.Instance.GetLoggerStatus(loggerSelezionato);
+                    Console.WriteLine($"\nLo stato attuale del Logger {nomeLogger} è: {(statoAttuale ? "ATTIVO" : "DISATTIVO")}");
+                    Console.Write("Vuoi (A)ttivarlo o (D)isattivarlo? (A/D): ");
+                    string azione = Console.ReadLine().ToUpper();
+
+                    if (azione == "A")
+                    {
+                        CompositeLogger.Instance.SetLoggerStatus(loggerSelezionato, true);
+                        Console.WriteLine($"Logger {nomeLogger} ATTIVATO.");
+                    }
+                    else if (azione == "D")
+                    {
+                        CompositeLogger.Instance.SetLoggerStatus(loggerSelezionato, false);
+                        Console.WriteLine($"Logger {nomeLogger} DISATTIVATO.");
+                    }
+                    else
+                    {
+                        Console.WriteLine("Azione non valida. Ritorno al menu precedente.");
+                    }
+                }
+
+                Console.WriteLine("\nPremi un tasto per continuare...");
+                Console.ReadKey();
+
+            } while (scelta != 4);
+        }
+
         static void AggiungiCorso(UniversitaController uni)
         {
             Console.Write("Codice corso: "); string codice = Console.ReadLine();
             Console.Write("Nome corso: "); string nome = Console.ReadLine();
             uni.AggiungiCorso(new CorsoDiLaurea(codice, nome));
             string msg = $"[LOG] Corso aggiunto: {nome} ({codice})";
-            Logger.Instance.Log(msg);
-            LoggerFile.Instance.Log(msg);
+            
+            CompositeLogger.Instance.Log(msg);
             Console.WriteLine("Corso aggiunto.");
         }
 
@@ -232,8 +321,8 @@ namespace Views
             uni.AggiungiProfessore(p, corso.Codice, materie);
 
             string msg = $"[LOG] Professore aggiunto: {nome} {cognome} ({id}) - Materia: {materia} al corso {corso.Nome}";
-            Logger.Instance.Log(msg);
-            LoggerFile.Instance.Log(msg);
+            CompositeLogger.Instance.Log(msg);
+
 
             Console.WriteLine("Professore aggiunto.");
         }
@@ -250,8 +339,7 @@ namespace Views
             var corso = uni.CercaCorso(codiceCorso);
             uni.AggiungiStudente(new Studente(nome, cognome, matricola, corso));
             string msg = $"[LOG] Studente aggiunto: {nome} {cognome} ({matricola})";
-            Logger.Instance.Log(msg);
-            LoggerFile.Instance.Log(msg);
+            CompositeLogger.Instance.Log(msg);
             Console.WriteLine("Studente aggiunto.");
         }
 
@@ -263,8 +351,7 @@ namespace Views
             if (!int.TryParse(Console.ReadLine(), out int voto)) { Console.WriteLine("Voto non valido."); return; }
             uni.AggiungiVotoStudente(matricola, materia, voto);
             string msg = $"[LOG] Voto aggiunto: {voto} in {materia} per {matricola}";
-            Logger.Instance.Log(msg);
-            LoggerFile.Instance.Log(msg);
+            CompositeLogger.Instance.Log(msg);
             Console.WriteLine("Voto aggiunto.");
         }
 
@@ -273,8 +360,7 @@ namespace Views
             Console.Write("Matricola: "); string matricola = Console.ReadLine();
             uni.StampaLibrettoStudente(matricola);
             string msg = $"[LOG] Visualizzato libretto studente: {matricola}";
-            Logger.Instance.Log(msg);
-            LoggerFile.Instance.Log(msg);
+            CompositeLogger.Instance.Log(msg);
         }
 
         
@@ -284,8 +370,7 @@ namespace Views
             foreach (var s in uni.OrdinaStudentiPerMedia())
                 Console.WriteLine($"{s.Nome} {s.Cognome} ({s.Matricola}) - Media: {s.Media:F2}");
             string msg = "[LOG] Studenti ordinati per media";
-            Logger.Instance.Log(msg);
-            LoggerFile.Instance.Log(msg);
+            CompositeLogger.Instance.Log(msg);
         }
 
         static void VisualizzaStorico(UniversitaController uni)
@@ -293,8 +378,7 @@ namespace Views
             Console.WriteLine("--- Storico Operazioni ---");
             foreach (var op in uni.VisualizzaStorico()) Console.WriteLine(op);
             string msg = "[LOG] Visualizzato storico operazioni";
-            Logger.Instance.Log(msg);
-            LoggerFile.Instance.Log(msg);
+            CompositeLogger.Instance.Log(msg);
         }
 
         static void AnnullaUltimaOperazione(UniversitaController uni)
@@ -302,8 +386,7 @@ namespace Views
             var op = uni.AnnullaUltimaOperazione();
             Console.WriteLine(op != null ? $"Operazione annullata: {op}" : "Nessuna operazione da annullare.");
             string msg = $"[LOG] Operazione annullata: {op}";
-            Logger.Instance.Log(msg);
-            LoggerFile.Instance.Log(msg);
+            CompositeLogger.Instance.Log(msg);
         }
 
         static void AggiungiRichiestaIscrizione(UniversitaController uni)
@@ -316,8 +399,7 @@ namespace Views
             var studente = uni.CercaStudente(m);
             uni.AggiungiRichiestaIscrizione(studente, corso);
             string msg = $"[LOG] Richiesta iscrizione aggiunta: {m} -> {codiceCorso}";
-            Logger.Instance.Log(msg);
-            LoggerFile.Instance.Log(msg);
+            CompositeLogger.Instance.Log(msg);
             Console.WriteLine("Richiesta aggiunta alla coda.");
         }
 
@@ -326,8 +408,7 @@ namespace Views
             var r = uni.ApprovaProssimaIscrizione();
             Console.WriteLine(r != null ? $"Iscrizione approvata: {r.Studente.Nome} {r.Studente.Cognome} -> {r.Corso.Nome}" : "Nessuna richiesta in coda.");
             string msg = r != null ? $"[LOG] Iscrizione approvata: {r.Studente.Matricola} -> {r.Corso.Codice}" : "[LOG] Nessuna iscrizione da approvare";
-            Logger.Instance.Log(msg);
-            LoggerFile.Instance.Log(msg);
+            CompositeLogger.Instance.Log(msg);
         }
 
         static void VisualizzaCodaIscrizioni(UniversitaController uni)
@@ -336,8 +417,7 @@ namespace Views
             foreach (var r in uni.VisualizzaCodaIscrizioni())
                 Console.WriteLine($"{r.Studente.Nome} {r.Studente.Cognome} ({r.Studente.Matricola}) -> {r.Corso.Nome}");
             string msg = "[LOG] Visualizzata coda iscrizioni";
-            Logger.Instance.Log(msg);
-            LoggerFile.Instance.Log(msg);
+            CompositeLogger.Instance.Log(msg);
         }
 
         static void VisualizzaCorsi(UniversitaController uni)

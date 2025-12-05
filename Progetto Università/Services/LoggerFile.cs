@@ -1,10 +1,12 @@
-﻿using System;
+﻿using Interfaces;
+using Progetto_Università.Interfaces;
+using System;
 using System.Collections.Generic;
 using System.IO;
 
 namespace Services
 {
-    public sealed class LoggerFile
+    public sealed class LoggerFile : ILogger
     {
         private static LoggerFile _instance = null;
         private List<string> logInMemoria = new List<string>();

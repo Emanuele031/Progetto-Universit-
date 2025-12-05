@@ -157,3 +157,10 @@ namespace Controllers
         }
     }
 }
+//mailto:f.lombardi79@gmail.com
+/*Una classe POCO (Plain Old CLass) è una classe che rappresenta un semplice oggetto di dominio, senza dipendenze da framework complessi, e che viene utilizzata principalmente per il recupero e la memorizzazione di dati. È un concetto chiave nella programmazione a oggetti, specialmente in linguaggi come Java e C#, e la sua semplicità la rende facilmente utilizzabile per serializzazione, deserializzazione e per passare dati tra diversi strati di un'applicazione. 
+Caratteristiche principali di una classe POCO:
+Semplicità: Non ha bisogno di ereditare da classi di framework specifiche o di implementare interfacce speciali.
+Focus sui dati: La sua funzione principale è quella di contenere dati, con proprietà pubbliche e metodi getter/setter.
+Indipendenza: È libera da dipendenze esterne complesse, il che la rende riutilizzabile e testabile in modo isolato.
+Versatilità: È ideale per l'interscambio di dati e per la persistenza in database o file*/
